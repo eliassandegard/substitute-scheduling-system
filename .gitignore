@@ -1,0 +1,32 @@
+# ============================================
+# Java & Servlets project .gitignore
+# ============================================
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# BlueJ files
+*.ctxt
+
+# Package files (can be rebuilt or downloaded)
+*.jar
+*.war
+*.ear
+
+# IDE-specific
+.idea/
+*.iml
+out/
+target/
+*.ipr
+*.iws
+
+# VS Code
+.vscode/
+
+# OS-specific
+.DS_Store
+Thumbs.db

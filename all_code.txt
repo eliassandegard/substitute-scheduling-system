@@ -1,0 +1,571 @@
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\AccessException.java =====
+package se.yrgo.schedule;
+
+public class AccessException extends Exception {
+  public AccessException(String msg) {
+    super(msg);
+  }
+
+  public AccessException(String msg, Throwable cause) {
+    super(msg, cause);
+  }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\Assignment.java =====
+package se.yrgo.schedule;
+
+/**
+ * Represents an assignment for at substitute teacher,
+ * with information on the date of the assignment (including
+ * start time), the teacher's name and the school of the 
+ * assignment (the school where the teacher should teach).
+ */
+public class Assignment {
+  private String teacher;
+  private String date;
+  private String school;
+
+  /**
+   * Creates a new Assignment
+   * @param teacher This assignment's teacher's name
+   * @param date The date of this Assignment
+   * @param school The school of this Assignment
+   */
+  public Assignment(String teacher, String date, String school) {
+    this.teacher = teacher;
+    this.date = date;
+    this.school = school;
+  }
+
+  /**
+   * Returns this Assignment's teacher's name
+   * @return This Assignment's teacher's name
+   */
+  public String teacher() {
+    return this.teacher;
+  }
+
+  /**
+   * Returns the date of this Assignment
+   * @return The date of this Assignment
+   */
+  public String date() {
+    return this.date;
+  }
+
+  /**
+   * Returns this Assignment's school
+   * @return This Assignment's school
+   */
+  public String school() {
+    return this.school;
+  }
+
+  /**
+   * This Assignment, represented as a String
+   * @return This Assignment represented as a String
+   */
+  @Override
+  public String toString() {
+    return new StringBuilder(date)
+      .append(" (").append(teacher).append(")")
+      .append(" at ").append(school)
+      .toString();
+  }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\Assignments.java =====
+package se.yrgo.schedule;
+
+import java.util.List;
+
+/**
+ * <p>A small interface declaring the access methods to the data.</p>
+ */
+public interface Assignments {
+  /**
+   * Returns all Assignments for all teachers for all dates
+   */
+  public List<Assignment> all() throws AccessException;
+  /**
+   * Returns the Assignmens for the given teacher
+   * @param teacherId The id of the teacher
+   * @return the Assigments for the given teacher
+   */
+  public List<Assignment> forTeacher(String teacherId) throws AccessException;
+
+  /**
+   * Returns the assignments at a given date
+   * @param date The date, as a String (YYYY-mm-ddd)
+   * @return The Assignments at the given date
+   */
+  public List<Assignment> at(String date) throws AccessException;
+
+  /**
+   * Returns the assignments for the given teacher at the given date
+   * @param teacherId The id of the teacher
+   * @param date The date in question
+   * @return The assignments for the given teacher at the given date
+   */
+  public List<Assignment> forTeacherAt(String teacherId, String date) throws AccessException;
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\AssignmentsFactory.java =====
+package se.yrgo.schedule;
+
+public class AssignmentsFactory {
+  private AssignmentsFactory() {}
+  public static Assignments getAssignments() {
+    return new DatabaseAssignments();
+  }
+  
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\DatabaseAssignments.java =====
+package se.yrgo.schedule;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
+/**
+ * An implementation of the Assignments interface
+ */
+public class DatabaseAssignments implements Assignments {
+
+  private static final String SELECT_ALL =
+    new StringBuilder("select day, name, school_name from schedule")
+    .append(" join substitute on schedule.substitute_id=substitute.substitute_id")
+    .append(" join school on schedule.school_id = school.school_id")
+    .toString();
+  private static final String SELECT_WITH_SUBSTITUTE_ID =
+    new StringBuilder("select day, name, school_name from schedule")
+    .append(" join substitute on schedule.substitute_id=substitute.substitute_id")
+    .append(" join school on schedule.school_id = school.school_id WHERE substitute.substitute_id=")
+    .toString();
+  
+  DBHelper db;
+  DatabaseAssignments() {
+    db = new DBHelper();
+  }
+
+  public List<Assignment> all() throws AccessException {
+    List<Assignment> result = new ArrayList<>();
+    try {
+      ResultSet rs = db.fetch(SELECT_ALL);
+      while (rs.next()) {
+        result.add(new Assignment(rs.getString("name"), rs.getString("day"), rs.getString("school_name")));
+      }
+      return result;
+    } catch (SQLException sqle) {
+      throw new AccessException("Problem fetching all assignments", sqle);
+    }
+  }
+  
+  public List<Assignment> forTeacher(String teacherId) throws AccessException {
+    List<Assignment> result = new ArrayList<>();
+    try {
+      ResultSet rs = db.fetch(SELECT_WITH_SUBSTITUTE_ID + teacherId);
+      while (rs.next()) {
+        result.add(new Assignment(rs.getString("name"), rs.getString("day"), rs.getString("school_name")));
+      }
+      return result;
+    } catch (SQLException sqle) {
+      throw new AccessException("Problem fetching all assignments", sqle);
+    }
+  }
+
+  public List<Assignment> at(String date) throws AccessException {
+    List<Assignment> result = new ArrayList<>();
+    try {
+      ResultSet rs = db.fetch(SELECT_ALL + " where schedule.day = '" + date + " 08:00:00'");
+      while (rs.next()) {
+        result.add(new Assignment(rs.getString("name"), rs.getString("day"), rs.getString("school_name")));
+      }
+      return result;
+    } catch (SQLException sqle) {
+      throw new AccessException("Problem fetching all assignments", sqle);
+    }
+  }
+
+  public List<Assignment> forTeacherAt(String teacherId, String date) throws AccessException {
+    List<Assignment> result = new ArrayList<>();
+    try {
+      ResultSet rs = db.fetch(SELECT_WITH_SUBSTITUTE_ID + teacherId + " and schedule.day='" + date + " 08:00:00'");
+      System.out.println(SELECT_WITH_SUBSTITUTE_ID + teacherId + " and schedule.day='" + date + " 08:00:00'");
+      while (rs.next()) {
+        result.add(new Assignment(rs.getString("name"), rs.getString("day"), rs.getString("school_name")));
+      }
+      return result;
+    } catch (SQLException sqle) {
+      throw new AccessException("Problem fetching all assignments", sqle);
+    }
+  }
+
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\DBHelper.java =====
+package se.yrgo.schedule;
+
+import java.sql.*;
+
+/**
+ * A class with a helper method to get a ResultSet from the database.
+ * Also "handles" the Connection to the DB.
+ */
+public class DBHelper {
+
+  private static Connection con;
+  static {
+    try {
+      con = DriverManager.getConnection("jdbc:sqlite:www/WEB-INF/resources/vikarie.db");
+    } catch (SQLException e) {
+      System.err.println("Error getting connection: " + e.getMessage());
+    }
+  }
+
+  public ResultSet fetch(String SQL) {
+    try {
+      //System.out.println("SQL:\n" + SQL);
+      Statement stm = con.createStatement();
+      return stm.executeQuery(SQL);
+    } catch (SQLException e) {
+      System.err.println("Error reading from DB: " + e.getMessage());
+      return null;
+    }
+  }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\Formatter.java =====
+package se.yrgo.schedule;
+
+import java.util.List;
+
+public interface Formatter {
+  public String format(List<Assignment> assignments);
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\FormatterFactory.java =====
+package se.yrgo.schedule;
+
+/**
+ * A factory to get a formatter (only HTML is implemented)
+ */
+public class FormatterFactory {
+
+  private static Formatter XML_FORMATTER;
+  private static Formatter HTML_FORMATTER = new HtmlFormatter();
+  private static Formatter JSON_FORMATTER;
+
+  /**
+   * Returns a formatter for the given contentType
+   * @param The content type you want to format to (HTML is the only implemented)
+   * @return A Formatter of the correct type, depending on the provided
+   * contentType. Defaults to HTML. Cannot handle null.
+   */
+  public static Formatter getFormatter(String contentType) {
+    if (contentType.contains("xml")) {
+      return XML_FORMATTER;
+    } else if (contentType.contains("json")) {
+      return JSON_FORMATTER;
+    } else {
+      return HTML_FORMATTER;
+    }
+  }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\HtmlFormatter.java =====
+package se.yrgo.schedule;
+
+import java.util.List;
+
+/**
+ * A class implementing the Formatter interface. Formats a List of Assignment
+ * to HTML.
+ *
+ */
+public class HtmlFormatter implements Formatter {
+  public String format(List<Assignment> assignments) {
+    StringBuffer html = new StringBuffer("<!DOCTYPE html>\n")
+      .append("<html lang=\"en\">\n")
+      .append("<head><title>Substitutes R Us - Schedule API</title></head>\n")
+      .append("<body>\n")
+      .append("<h1>Schedule</h1>\n");
+    if (assignments.size() == 0) {
+      html.append("<em>No assignments found.</em>");
+    } else {
+      html.append("<table border=\"1\">\n <tr>\n  <th>Teacher</th>\n  <th>date</th>\n  <th>school</th>\n </tr>\n");
+      for (Assignment assignment : assignments) {
+        html.append(" <tr>\n  <td>").append(assignment.teacher()).append("</td>\n")
+          .append("  <td>").append(assignment.date()).append("</td>\n")
+          .append("  <td>").append(assignment.school()).append("</td>\n </tr>\n");
+      }          
+      html.append("</table>\n");
+    }
+    html.append("</body>\n");
+    html.append("</html>\n");
+    return html.toString();
+  }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\JsonFormater.java =====
+package se.yrgo.schedule;
+
+import java.util.List;
+
+/**
+ * A class implementing the Formatter interface. Formats a List of Assignment
+ * to Json.
+ *
+ */
+public class JsonFormatter implements Formatter {
+    public String format(List<Assignment> assignments) {
+        StringBuffer html = new StringBuffer("<!DOCTYPE html>\n")
+                .append("<html lang=\"en\">\n")
+                .append("<head><title>Substitutes R Us - Schedule API</title></head>\n")
+                .append("<body>\n")
+                .append("<h1>Schedule</h1>\n");
+        if (assignments.size() == 0) {
+            html.append("<em>No assignments found.</em>");
+        } else {
+            html.append("<table border=\"1\">\n <tr>\n  <th>Teacher</th>\n  <th>date</th>\n  <th>school</th>\n </tr>\n");
+            for (Assignment assignment : assignments) {
+                html.append(" <tr>\n  <td>").append(assignment.teacher()).append("</td>\n")
+                        .append("  <td>").append(assignment.date()).append("</td>\n")
+                        .append("  <td>").append(assignment.school()).append("</td>\n </tr>\n");
+            }
+            html.append("</table>\n");
+        }
+        html.append("</body>\n");
+        html.append("</html>\n");
+        return html.toString();
+    }
+    public String format(List<Assignment> assignments) {
+        return "[ { \"some-key\": \"some-value\" } ]";
+    }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\ParamParser.java =====
+package se.yrgo.schedule;
+
+import javax.servlet.http.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+/**
+ * <p>Parses a request for the Servlet</p>
+ * <p>Tries to detect:
+ * <ul>
+ * <li>The type (all|day|teacher_id|day and teacher_id</li>
+ * <li>day</li>
+ * <li>teacherId</li>
+ * <li>contentType</li>
+ * <li>format (html|json|xml) (only html is implemented in this example)</li>
+ * </ul>
+ * </p>
+ */
+public class ParamParser {
+  enum QueryType {
+    ALL,
+    TEACHER_ID,
+    DAY,
+    TEACHER_ID_AND_DAY
+  }
+  
+  private HttpServletRequest request;
+  private QueryType type;
+  private String teacherId;
+  private String day;
+  private String contentType;
+  private String format;
+
+  /**
+   * Constructs a new ParamParser from the Servlet's request object
+   * @param request The Servlet's request, whose GET params will be parsed
+   */
+  public ParamParser(HttpServletRequest request) {
+    this.request = request;
+    parseValues();
+    parseType();
+    parseContentType();
+    /*System.out.printf("Type: %s teacherId: %s day: %s Content-Type: %s Format: %s\n",
+      type.toString(), teacherId, day, contentType, format); */
+  }
+
+  private void parseContentType() {
+    // Default to text/html
+    if (format == null) {
+      contentType = "text/html;charset=" + UTF_8.name();
+    }
+  }
+
+  /**
+   * Returns the content type of the request
+   * @return The content-type as a String, or "html" (default) if none is given
+   */
+  public String contentType() {
+    return contentType;
+  }
+  
+  private void parseType() {
+    if (teacherId == null && day == null) {
+      type = QueryType.ALL;
+    } else if (day != null && teacherId != null) {
+      type = QueryType.TEACHER_ID_AND_DAY;
+    } else if (day != null && teacherId == null) {
+      type = QueryType.DAY;
+    } else {
+      type = QueryType.TEACHER_ID;
+    }
+  }
+  
+  private void parseValues() {
+    this.format = request.getParameter("format");
+    if (format != null) {
+      format = format.toLowerCase();
+    } else {
+      format = "html";
+    }
+    this.day = request.getParameter("day");
+    this.teacherId = request.getParameter("substitute_id");    
+  }
+
+  /**
+   * Returns the format from the request param format, as a String
+   * @return The format request parameter, as a String, or null if none is given
+   */
+  public String format() {
+    return format;
+  }
+
+  /**
+   * Returns the day paramteter of the request
+   * @return The day parameter of the request, as a String, or null if none is given
+   */
+  public String day() {
+    return day;
+  }
+
+  /**
+   * Returns the teacherId (from the substitute_id parameter), as a String
+   * @return The teacherId, as a String, or null if none is given
+   */
+  public String teacherId() {
+    return teacherId;
+  }
+
+  /**
+   * Returns the QueryType of the request, one of ALL, TEACHER_ID, DAY, and,
+   * TEACHER_ID_AND_DAY (an enum of this class)
+   * @return the QueryType found in this query. See the QueryType enum.
+   */
+  public QueryType type() {
+    return type;
+  }
+
+  /**
+   * Returns this parser as a String representation. Mostly for debuggin.
+   * @return This ParamParser as a String representation.
+   */
+  @Override
+  public String toString() {
+    return String.format("Type: %s teacherId: %s day: %s Content-Type: %s Format: %s\n",
+                         type.toString(), teacherId, day, contentType, format);
+  }
+}
+
+
+
+===== C:\Users\elias\IdeaProjects\substitute-scheduling-system\www\WEB-INF\classes\se\yrgo\schedule\ScheduleServlet.java =====
+package se.yrgo.schedule;
+
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.List;
+import javax.servlet.*;
+import javax.servlet.http.*;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
+/**
+ * <p>Listens to requests on localhost:8080/v1/ and accepts the following parameters:
+ * <ul>
+ * <li> none - lists all schedules for all teachers </li>
+ * <li> substitute_id - the ID for a substitute teacher you want to list the schedult for</li>
+ * <li> day - the day (YYYY-mm-dd) you want to see the schedule for</li>
+ * </ul>
+ * <p>The substitute_id and day parameters can be combined or used alone.</p>
+ */
+public class ScheduleServlet extends HttpServlet {
+    @Override
+    public void doGet(HttpServletRequest request, HttpServletResponse response)
+      throws ServletException, IOException {
+      // Read the request as UTF-8
+      request.setCharacterEncoding(UTF_8.name());
+
+      // Parse the arguments - see ParamParser class
+      ParamParser parser = new ParamParser(request);
+      // Set the content type (using the parser)
+      response.setContentType(parser.contentType());
+      // To write the response, we're using a PrintWriter
+      response.setCharacterEncoding(UTF_8.name());
+      PrintWriter out = response.getWriter();
+      // Get access to the database, using a factory
+      // Assignments is an interface - see Assignments interface
+      Assignments db = AssignmentsFactory.getAssignments();
+      // Start with an empty list (makes code easier)
+      List<Assignment> assignments = new ArrayList<>();
+      // Call the correct method, depending on the parser's type value
+      try {
+        StringBuilder table;
+        switch (parser.type()){
+          case ALL:
+            assignments = db.all();
+            break;
+          case TEACHER_ID_AND_DAY:
+            assignments = db.forTeacherAt(parser.teacherId(), parser.day());
+            break;
+          case DAY:
+            assignments = db.at(parser.day());
+            break;
+          case TEACHER_ID:
+            assignments = db.forTeacher(parser.teacherId());
+        }
+      } catch (AccessException e) {
+        out.println("Error fetching data: " + e.getMessage());
+        System.err.println("Error: " +e);
+        e.printStackTrace();
+      }
+      // Get a formatter, by asking the parser for the format (defaults to HTML)
+      Formatter formatter = FormatterFactory.getFormatter(parser.format());
+      // Format the result to the format according to the parser:
+      String result = formatter.format(assignments);
+      // Print the result and close the PrintWriter
+      out.println(result);
+      out.close();
+    }
+}
+
+
+

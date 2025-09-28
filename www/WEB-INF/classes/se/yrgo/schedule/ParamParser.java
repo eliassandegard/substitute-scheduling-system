@@ -45,13 +45,6 @@ public class ParamParser {
       type.toString(), teacherId, day, contentType, format); */
     }
 
-    private void parseContentType() {
-        // Default to text/html
-        if (format == null) {
-            contentType = "text/html;charset=" + UTF_8.name();
-        }
-    }
-
     /**
      * Returns the content type of the request
      *
