@@ -1,32 +1,37 @@
-# ============================================
-# Java & Servlets project .gitignore
-# ============================================
+# =========================
+# Java / Servlet Project
+# =========================
 
 # Compiled class files
 *.class
 
-# Log files
+# Logs
 *.log
 
-# BlueJ files
-*.ctxt
-
-# Package files (can be rebuilt or downloaded)
-*.jar
-*.war
-*.ear
-
-# IDE-specific
-.idea/
-*.iml
+# Build output
 out/
 target/
-*.ipr
-*.iws
+
+# IntelliJ IDEA
+.idea/
+*.iml
 
 # VS Code
 .vscode/
 
-# OS-specific
+# OS junk
 .DS_Store
 Thumbs.db
+
+# Package archives (we rebuild/download these if needed)
+*.jar
+*.war
+*.ear
+
+# =========================
+# Exceptions (keep your local jars for this assignment)
+# =========================
+!winstone.jar
+!javax.servlet-api-4.0.1.jar
+!sqlite-jdbc.jar
+!org.json.jar
