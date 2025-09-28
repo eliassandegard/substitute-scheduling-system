@@ -16,9 +16,9 @@ public class FormatterFactory {
    * contentType. Defaults to HTML. Cannot handle null.
    */
   public static Formatter getFormatter(String contentType) {
-    if (contentType.contains("xml")) {
+    if (contentType.contains("xml")) { // TODO: change to equalsIgnoreCase
       return XML_FORMATTER;
-    } else if (contentType.contains("json")) {
+    } else if (contentType.equalsIgnoreCase("json")) {
       return JSON_FORMATTER;
     } else {
       return HTML_FORMATTER;
